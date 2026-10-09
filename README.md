@@ -1,48 +1,77 @@
 # BMAS: Measuring and reducing case-wise regressions across exits in multi-exit brain-tumor MRI segmentation
 
-Code for the paper *BMAS: Measuring and reducing case-wise regressions across exits in multi-exit
-brain-tumor MRI segmentation* (Nguyen Thien Phuc, Tran Cao Minh, Kiet Van Nguyen, Vu Minh Tran,
-Ha Minh Tan; submitted to *Signal, Image and Video Processing*).
+[![Pillow](https://img.shields.io/badge/Pillow-%3E%3D10.0-blue)](https://python-pillow.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D2.4-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Torchvision](https://img.shields.io/badge/Torchvision-%3E%3D0.19-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/vision/)
+[![NumPy](https://img.shields.io/badge/NumPy-%3E%3D1.26-013243?logo=numpy&logoColor=white)](https://numpy.org/)
+[![Pandas](https://img.shields.io/badge/Pandas-%3E%3D2.2-150458?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 
-BMAS is a four-exit segmentation network (EfficientNet-B0 encoder, residual exits: each exit adds a
-correction to the previous logits). The repository trains the five objectives studied in the paper
-(A–E) and the endpoint baselines, evaluates every exit on the held-out set, and runs all analyses of
-the paper and of Online Resource 1: case-wise regression rates (MVR, BMVR), local boundary transitions
-(BHR, BCR), conditioning on starting quality, regression size and final-exit regret, connected
-components, post-hoc exit smoothing (damping, cumulative averaging), area-normalized early stopping,
-GPU/CPU compute profiles, the MESS-style/ADP-C-style comparators, and a 2-D nnU-Net baseline.
+This repository provides the official PyTorch implementation of the paper
+
+>**BMAS: Measuring and reducing case-wise regressions across exits in multi-exit brain-tumor MRI segmentation**.
+
+**Authors:** Nguyen Thien Phuc, Tran Cao Minh, Kiet Van Nguyen, Vu Minh Tran, and Ha Minh Tan.
+
+**Manuscript status:** Submitted to *Signal, Image and Video Processing*.
+
+> **Repository Summary**: BMAS is a four-exit segmentation network (EfficientNet-B0 encoder, residual exits: each exit adds a correction to the previous logits). The repository trains the five objectives studied in the paper (A–E) and the endpoint baselines, evaluates every exit on the held-out set, and runs all analyses of the paper and of Online Resource 1: case-wise regression rates (MVR, BMVR), local boundary transitions (BHR, BCR), conditioning on starting quality, regression size and final-exit regret, connected components, post-hoc exit smoothing (damping, cumulative averaging), area-normalized early stopping, GPU/CPU compute profiles, the MESS-style/ADP-C-style comparators, and a 2-D nnU-Net baseline.
 
 ## Repository layout
 
-```
-bmas/              model (BMASNet + baselines), data loader, losses (A-C), transition losses (D, E),
-                   metrics (Dice, IoU, HD95, ASSD, Boundary-IoU), local boundary metrics (BHR/BCR)
-competitors/       same-backbone MESS-style and ADP-C-style multi-exit comparators
-configs/           one YAML per variant (A-E) and per endpoint baseline
-scripts/           prepare_brisc, train, evaluate, GPU profiling helpers
-experiments/       analyses, post-hoc rules, stopping, CPU profiling, nnU-Net, figures, ESM builder
-run/               numbered shell steps 00-06 (+ Slurm job)
-reproduce_all.sh   runs every step in order
-docs/              details of the analysis pipeline and of GPU profiling
-```
+| Path | Description |
+|---|---|
+| `bmas/` | BMASNet and baseline models, data loading, loss functions, and evaluation metrics. |
+| `competitors/` | MESS-style and ADP-C-style multi-exit comparators using the same backbone. |
+| `configs/` | YAML configurations for variants A–E and endpoint baselines. |
+| `scripts/` | Data preparation, training, evaluation, and GPU profiling scripts. |
+| `experiments/` | Analysis scripts, post-hoc smoothing and early stopping, CPU profiling, nnU-Net integration, and figure and supplementary material generation. |
+| `run/` | Shell scripts for reproduction steps 00–06 and a Slurm job script. |
+| `reproduce_all.sh` | Entry point for running the full reproduction pipeline in order. |
+| `docs/` | Documentation for the analysis pipeline and GPU profiling. |
 
 ## Installation
 
+Using **venv**:
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt          # install torch/torchvision matching your CUDA first if needed
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Python 3.10–3.12, PyTorch ≥ 2.4. A CUDA GPU is needed for training; analyses run on CPU.
+Or using **conda**:
+
+```bash
+conda create -n bmas python=3.11 -y
+conda activate bmas
+pip install -r requirements.txt
+```
+
+An NVIDIA GPU with CUDA support is recommended for training, while analyses can run on CPU.
 
 ## Data
 
-Download BRISC 2025 (Fateh et al., *Scientific Data*, 2026; arXiv:2506.14318) and place it so that
-`datasets/brisc2025/segmentation_task/{train,test}/{images,masks}/` exists, or set `DATA_ROOT`.
-`run/00_prepare_data.sh` writes `data/brisc2025_manifest.csv`: the BRISC test images form the held-out
-set (860 images), and the development images are split once with seed 42 into training (3,343) and
-validation (590) images, reused for every training seed. If you have the manifest used for the paper,
-pass it with `MANIFEST=/path/to/manifest.csv` instead.
+Download the [BRISC 2025 dataset](https://www.kaggle.com/datasets/briscdataset/brisc2025/), originally introduced by Fateh et al. in *Scientific Data*, **13**, 361 (2026) ([DOI: 10.1038/s41597-026-06753-y](https://doi.org/10.1038/s41597-026-06753-y)), and organize the dataset as follows:
+
+```text
+datasets/brisc2025/segmentation_task/
+├── train/
+│   ├── images/
+│   └── masks/
+└── test/
+    ├── images/
+    └── masks/
+```
+
+If the dataset is stored elsewhere, set `DATA_ROOT` to its location.
+
+Run `run/00_prepare_data.sh` to generate `data/brisc2025_manifest.csv`.
+The official test set is kept as the held-out set (860 images). The development
+set is split into training (3,343 images) and validation (590 images) using
+seed 42. This split is reused across all training seeds.
+
+To use an existing manifest from the paper, set
+`MANIFEST=/path/to/manifest.csv`.
 
 ## Reproducing the paper
 
@@ -97,7 +126,7 @@ Every number in the ESM is read from these outputs; `experiments/make_esm.py` co
 * **nnU-Net** is trained once with its default 2-D configuration (1,000 epochs) on the same split.
 
 ## Citation
-
+If this repository contributes to your research, please consider citing the paper:
 ```bibtex
 @article{phuc2026bmas,
   title   = {{BMAS}: Measuring and reducing case-wise regressions across exits in multi-exit brain-tumor {MRI} segmentation},
@@ -108,6 +137,16 @@ Every number in the ESM is read from these outputs; `experiments/make_esm.py` co
 }
 ```
 
-## Contact
+## Contributing
 
-Ha Minh Tan, University of Information Technology, VNU-HCM — tanhm@uit.edu.vn
+We welcome contributions, suggestions, and improvements to this repository.
+If you plan to propose significant changes or new features, please open an
+issue to discuss your ideas with the maintainers before submitting a pull
+request. This helps ensure that the proposed contributions align with the
+scope and objectives of the project.
+
+## Correspondence
+
+**Ha Minh Tan** (Corresponding Author)  
+University of Information Technology, Vietnam National University Ho Chi Minh City (VNU-HCM)  
+Email: [tanhm@uit.edu.vn](mailto:tanhm@uit.edu.vn)
