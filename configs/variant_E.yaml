@@ -1,0 +1,54 @@
+# BMAS experiment config (paper, Sect. 4-5). Seed, data paths and output dir are set on the command line.
+image_size: 256
+batch_size: 12
+num_workers: 4
+encoder: efficientnet_b0
+num_exits: 4
+pretrained_encoder: true
+epochs: 40
+lr: 0.0003
+weight_decay: 0.0001
+scheduler: cosine
+warmup_epochs: 2
+warmup_start_factor: 0.1
+min_lr: 1.0e-06
+grad_clip: 5.0
+amp: true
+exit_weights:
+- 0.1
+- 0.15
+- 0.25
+- 0.5
+dice_weight: 0.6
+bce_weight: 0.4
+boundary_weight: 0.15
+monotonic_weight: 0.0
+monotonic_margin: 0.0
+boundary_kernel: 5
+monitor: val_exit4_dice
+patience: 10
+threshold: 0.5
+experiment_name: bmas_E_preserve_dominant
+paper_variant: E
+objective: transition
+transition:
+  band: 7
+  power: 2.0
+  margin: 0.0
+  tail_fraction: 0.2
+  d_weight: 0.2
+  d_coeffs:
+  - 1.0
+  - 0.5
+  - 0.25
+  e_coeffs:
+  - 1.0
+  - 0.1
+  - 0.1
+  e_beta:
+  - 0.2
+  - 0.5
+  - 1.0
+  lambda_max: 0.1
+  warmup_epochs: 5
+  ramp_epochs: 5
